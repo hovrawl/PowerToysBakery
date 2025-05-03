@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "BitwardenSearch (Package)": {
+      "commandName": "MsixPackage",
+      "doNotLaunchApp": true
+    },
+    "BitwardenSearch (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

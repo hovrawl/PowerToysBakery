@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationIcon>bitwarden.ico</ApplicationIcon>
+    <Title>AuthCenter with Bitwarden CLI Client</Title>
+    <Authors>Hudson Ventura and OceanAirdrop</Authors>
+    <Description>Nuget package that gives access to items saved in Bitwarden, abstracts and facilitates authentication with more than one step, such as OAuth2/JWT authentication</Description>
+    <PackageIcon>bitwarden.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/hudsonventura/AuthCenter</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/hudsonventura/AuthCenter</PackageProjectUrl>
+    <AssemblyName>Bitwarden.Client</AssemblyName>
+    <RootNamespace>Bitwarden.Client</RootNamespace>
+    <LangVersion>default</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Otp.NET" />
+    <PackageReference Include="RestSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="bitwarden.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

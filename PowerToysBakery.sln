@@ -1,0 +1,35 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BitwardenSearch", "BitwardenSearch\BitwardenSearch.csproj", "{7D48D732-9487-4122-8E1A-868110A24289}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BWConsoleTest", "BWConsoleTest\BWConsoleTest.csproj", "{03C993FF-FC58-481A-BF11-1E8620AD7057}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bitwarden.Client", "BitwardenWrapper\Bitwarden.Client.csproj", "{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CommandPaletteExtensions", "CommandPaletteExtensions", "{210EDB7C-6FA7-42DF-B447-32EF31CCEDA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|x64 = Release|x64
+		Debug|x64 = Debug|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D48D732-9487-4122-8E1A-868110A24289}.Release|x64.ActiveCfg = Release|x64
+		{7D48D732-9487-4122-8E1A-868110A24289}.Release|x64.Build.0 = Release|x64
+		{7D48D732-9487-4122-8E1A-868110A24289}.Debug|x64.ActiveCfg = Debug|x64
+		{7D48D732-9487-4122-8E1A-868110A24289}.Debug|x64.Build.0 = Debug|x64
+		{03C993FF-FC58-481A-BF11-1E8620AD7057}.Release|x64.ActiveCfg = Release|x64
+		{03C993FF-FC58-481A-BF11-1E8620AD7057}.Release|x64.Build.0 = Release|x64
+		{03C993FF-FC58-481A-BF11-1E8620AD7057}.Debug|x64.ActiveCfg = Debug|x64
+		{03C993FF-FC58-481A-BF11-1E8620AD7057}.Debug|x64.Build.0 = Debug|x64
+		{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D}.Release|x64.ActiveCfg = Release|x64
+		{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D}.Release|x64.Build.0 = Release|x64
+		{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D}.Debug|x64.ActiveCfg = Debug|x64
+		{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D}.Debug|x64.Build.0 = Debug|x64
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DEC5034E-ACDB-4241-AF20-CDFFE7796E0D} = {210EDB7C-6FA7-42DF-B447-32EF31CCEDA5}
+		{7D48D732-9487-4122-8E1A-868110A24289} = {210EDB7C-6FA7-42DF-B447-32EF31CCEDA5}
+		{03C993FF-FC58-481A-BF11-1E8620AD7057} = {210EDB7C-6FA7-42DF-B447-32EF31CCEDA5}
+	EndGlobalSection
+EndGlobal
