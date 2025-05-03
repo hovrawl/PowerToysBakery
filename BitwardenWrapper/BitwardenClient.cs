@@ -10,6 +10,7 @@ public class BitwardenClient : IDisposable
 {
     private string m_session = "";
 
+    private static string _downloadUrl = "https://bitwarden.com/download/?app=cli";
     public BitwardenClient(string url, string userName, string password)
     {
         m_session = LogIn(url, userName, password);
@@ -29,6 +30,103 @@ public class BitwardenClient : IDisposable
         }
     }
 
+
+    public static bool CliAvailable()
+    {
+        var bw = GetBWBinaryFilePath();
+        return File.Exists(bw);
+    }
+
+    public static async Task DownloadCli(IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var platform = (Environment.OSVersion.Platform.ToString().StartsWith("Win")) ? "windows" : "linux";
+        var url = $"{_downloadUrl}&platform={platform}";
+        var fileName = platform == "windows" ? "bw.exe" : "bw";
+        var targetPath = Path.Combine(GetAppLocation(), fileName);
+        var tempZipPath = Path.Combine(Path.GetTempPath(), "bitwarden_cli.zip");
+        var extractPath = Path.Combine(Path.GetTempPath(), "bitwarden_cli_extract");
+
+        try
+        {
+            // Step 1: Download the zip file
+            await DownloadFileWithProgress(url, tempZipPath, 0, 80, progress, cancellationToken);
+
+            // Step 2: Extract the zip file
+            if (progress != null) progress.Report(80);
+
+            // Ensure the extraction directory exists and is empty
+            if (Directory.Exists(extractPath))
+                Directory.Delete(extractPath, true);
+            Directory.CreateDirectory(extractPath);
+
+            // Extract the zip file
+            await Task.Run(() => { System.IO.Compression.ZipFile.ExtractToDirectory(tempZipPath, extractPath); },
+                cancellationToken);
+
+            if (progress != null) progress.Report(90);
+
+            // Step 3: Find and move the CLI executable
+            var cliExecutablePath = await FindCliExecutableInDirectory(extractPath, fileName, cancellationToken);
+            if (string.IsNullOrEmpty(cliExecutablePath))
+                throw new FileNotFoundException($"Could not find {fileName} in the extracted files.");
+
+            // Ensure the target directory exists
+            var targetDir = Path.GetDirectoryName(targetPath);
+            if (!Directory.Exists(targetDir) && targetDir != null)
+                Directory.CreateDirectory(targetDir);
+
+            // Copy the file to the target location (File.Copy doesn't have async version)
+            await Task.Run(() =>
+            {
+                if (File.Exists(targetPath))
+                    File.Delete(targetPath);
+                File.Copy(cliExecutablePath, targetPath);
+            }, cancellationToken);
+
+            // Step 4: Make the file executable on Linux/macOS platforms
+            if (platform != "windows")
+            {
+                try
+                {
+                    var process = new Process
+                    {
+                        StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "chmod",
+                            Arguments = $"+x \"{targetPath}\"",
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        }
+                    };
+                    process.Start();
+                    await process.WaitForExitAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Failed to set executable permissions: {ex.Message}");
+                }
+            }
+
+            if (progress != null) progress.Report(100);
+        }
+        finally
+        {
+            // Clean up temporary files
+            try
+            {
+                if (File.Exists(tempZipPath))
+                    File.Delete(tempZipPath);
+
+                if (Directory.Exists(extractPath))
+                    Directory.Delete(extractPath, true);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to clean up temporary files: {ex.Message}");
+            }
+        }
+    }
 
 
     public string LogIn(string url, string userName, string password, int otp = -1)
@@ -56,42 +154,6 @@ public class BitwardenClient : IDisposable
 
         return result;
     }
-
-    string LogInUsingApi(string url, string clientId, string clientSecret, string password)
-    {
-
-        string output = "";
-
-        Environment.SetEnvironmentVariable("BW_CLIENTID", clientId);
-        Environment.SetEnvironmentVariable("BW_CLIENTSECRET", clientSecret);
-
-        List<string> commands = new List<string>();
-        commands.Add($"config server {url}");
-        commands.Add($"login --apikey");
-        commands.Add($"unlock {password} --raw");
-
-
-        foreach (var cmd in commands)
-        {
-            //Console.Write(command + " --> "); //to tests
-            output = IssueBitWardenCommand(cmd);
-        }
-
-
-        return output;
-    }
-
-    private string GetBWBinaryFilePath()
-    {
-        var fileBW = (Environment.OSVersion.Platform.ToString().StartsWith("Win")) ? "bw.exe" : "bw";
-        var filePath = Path.Combine(GetAppLocation(), fileBW);
-
-        if (!File.Exists(filePath))
-            throw new Exception($"{fileBW} not found in current directory. Before start, please download the last version of Bitwarden CLI (BW) from https://bitwarden.com/help/cli/");
-        return fileBW;
-    }
-
-
 
     public string LogOut()
     {
@@ -188,7 +250,6 @@ public class BitwardenClient : IDisposable
 
         var result = IssueBitWardenCommand(cmd);
     }
-
 
     public Item CreateLogin(string orgId, string collectionId, string itemname, string username, string password, string uri, string notes = "some notes here")
     {
@@ -417,7 +478,51 @@ public class BitwardenClient : IDisposable
         return output.ToString();
     }
 
-    private string GetAppLocation()
+    
+    #region Private methods
+    
+    string LogInUsingApi(string url, string clientId, string clientSecret, string password)
+    {
+        try
+        {
+            LogOut(); // sanity logout!
+        }
+        catch (Exception)
+        {
+
+        }
+        string output = "";
+
+        Environment.SetEnvironmentVariable("BW_CLIENTID", clientId);
+        Environment.SetEnvironmentVariable("BW_CLIENTSECRET", clientSecret);
+
+        List<string> commands = new List<string>();
+        commands.Add($"config server {url}");
+        commands.Add($"login --apikey");
+        commands.Add($"unlock {password} --raw");
+
+
+        foreach (var cmd in commands)
+        {
+            //Console.Write(command + " --> "); //to tests
+            output = IssueBitWardenCommand(cmd);
+        }
+
+
+        return output;
+    }
+
+    private static string GetBWBinaryFilePath()
+    {
+        var fileBW = (Environment.OSVersion.Platform.ToString().StartsWith("Win")) ? "bw.exe" : "bw";
+        var filePath = Path.Combine(GetAppLocation(), fileBW);
+
+        if (!File.Exists(filePath))
+            //throw new Exception($"{fileBW} not found in current directory. Before start, please download the last version of Bitwarden CLI (BW) from https://bitwarden.com/help/cli/");
+            return string.Empty;
+        return fileBW;
+    }
+    private static string GetAppLocation()
     {
         string runningFrom = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
         return runningFrom;
@@ -443,6 +548,106 @@ public class BitwardenClient : IDisposable
         }
     }
 
+    
+    private static async Task DownloadFileWithProgress(string url, string destinationPath,
+        double progressStart, double progressEnd, IProgress<double>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var httpClient = new HttpClient();
+        using var response =
+            await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var contentLength = response.Content.Headers.ContentLength ?? -1L;
+        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
+
+        var buffer = new byte[8192]; // 8KB buffer
+        var totalBytesRead = 0L;
+        var bytesRead = 0;
+
+        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+        {
+            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+
+            totalBytesRead += bytesRead;
+
+            if (contentLength > 0 && progress != null)
+            {
+                var progressPercentage = progressStart +
+                                         ((double)totalBytesRead / contentLength * (progressEnd - progressStart));
+                progress.Report(progressPercentage);
+            }
+        }
+    }
+
+    private static async Task<string> FindCliExecutableInDirectory(string directoryPath, string fileName,
+        CancellationToken cancellationToken)
+    {
+        return await Task.Run(() =>
+        {
+            // First try to find the exact file name
+            var exactMatch = Directory.GetFiles(directoryPath, fileName, SearchOption.AllDirectories)
+                .FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(exactMatch))
+                return exactMatch;
+
+            // If not found, search for any executable that might be the CLI
+            // For Linux, it could be just 'bw' without extension
+            if (fileName == "bw")
+            {
+                var possibleFiles = Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories)
+                    .Where(f => Path.GetFileName(f) == "bw" ||
+                                (File.Exists(f) && IsExecutable(f)))
+                    .ToList();
+
+                return possibleFiles.FirstOrDefault() ?? string.Empty;
+            }
+
+            return string.Empty;
+        }, cancellationToken);
+    }
+
+    private static bool IsExecutable(string filePath)
+    {
+        try
+        {
+            // For Linux/macOS: Check if file has execute permission
+            // This is a simplified version, in real code you'd use P/Invoke to check POSIX permissions
+            if (!Environment.OSVersion.Platform.ToString().StartsWith("Win"))
+            {
+                var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "test",
+                    Arguments = $"-x \"{filePath}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                });
+
+                if (process != null)
+                {
+                    process.WaitForExit();
+                    return process.ExitCode == 0;
+                }
+
+                return false;
+            }
+
+            // For Windows: Check if it's an .exe or .com file
+            string extension = Path.GetExtension(filePath).ToLowerInvariant();
+            return extension == ".exe" || extension == ".com";
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    #endregion
+    
+    #region IDisposable Support
     public void Dispose()
     {
         try
@@ -454,4 +659,6 @@ public class BitwardenClient : IDisposable
 
         }
     }
+    
+    #endregion
 }
